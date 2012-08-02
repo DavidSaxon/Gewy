@@ -10,6 +10,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <math.h>
+#include <SDL/SDL.h>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <GL/gl.h>
@@ -22,16 +23,7 @@ class Gewy {
 private:
 
     //VARIABLES
-    Display* display;
-    Window root;
-    XVisualInfo *vi;
-    Colormap cmap;
-    XSetWindowAttributes swa;
-    Window win;
-    GLXContext glc;
-    XWindowAttributes gwa;
-    XEvent xev;
-    
+    SDL_Surface* display; //the display window
     int width;
     int height;
     string windowName; //the name of the window
@@ -44,7 +36,8 @@ private:
 public:
 
     //VARIABLES
-    
+    bool open; //is true while the window is open
+
     //CONSTRUCTOR
     /*Creates a new gui object.
     Takes the height, width and name of the window*/
@@ -57,7 +50,7 @@ public:
     /*initialise the gui*/
     bool init(int argc, char* argv[]);
     
-    /*Clears the window and draws to window*/
+    /*swaps the buffers*/
     void update();
     
     /*Returns the window width*/
@@ -97,6 +90,8 @@ public:
     
     /*Set the background colour of the window*/
     void setBackground(double r, double g, double b, double a);
+    
+    void onEvent(SDL_Event* event);
 
 };
 

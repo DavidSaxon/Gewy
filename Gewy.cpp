@@ -14,50 +14,24 @@ Gewy::~Gewy() {
 //FUNCTIONS
 /*initialise the gui*/
 bool Gewy::init(int argc, char* argv[]) {
-    //create and open a window
-    display = XOpenDisplay(NULL); //set the display
-    if (display == NULL) {
-        cout << "Cannot connect to XServer" << endl;
-        return false;
-    }
+    if (SDL_Init(SDL_INIT_EVERYTHING) < 0) return false; //intialise SDL
     
-    root = DefaultRootWindow(display); //set the window
+    //Open a window
+    const SDL_VideoInfo *videoInfo = SDL_GetVideoInfo(); //get the video info
+    int flags = SDL_OPENGL | SDL_GL_DOUBLEBUFFER | SDL_HWPALETTE; //sets the window flags
+    if(videoInfo->hw_available) flags |= SDL_HWSURFACE; //check to see if hardware surfaces are enabled
+    else flags |= SDL_SWSURFACE;
+    if(videoInfo->blit_hw) flags |= SDL_HWACCEL; //check to see if hardware supports blitting
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    if ((display = SDL_SetVideoMode(width, height, 32, flags)) == NULL) return false; //sets up the video mode
     
-    //create the window attributes
-    GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
-    
-    //set the visual info
-    vi = glXChooseVisual(display, 0, att);
-    
-    //create a colour map
-    cmap =  XCreateColormap(display, root, vi->visual, AllocNone);
-    
-    //create a structure for setwindowattributes   
-    swa.colormap = cmap;
-    swa.event_mask = ExposureMask | KeyPressMask;
-   
-    //create the the window
-    win = XCreateWindow(display, root, 0, 0, width, height, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
-    
-    //display the window
-    XMapWindow(display, win);
-    XStoreName(display, win, (const char*) windowName.c_str());
- 
-    glc = glXCreateContext(display, vi, NULL, GL_TRUE);
-    glXMakeCurrent(display, win, glc);
-    
-    //init opengl
-    XGetWindowAttributes(display, win, &gwa);
-    glViewport(0, 0, gwa.width, gwa.height);
-    while (gwa.width  <= 1 || gwa.height <= 1) {
-        XGetWindowAttributes(display, win, &gwa);
-        glViewport(0, 0, gwa.width, gwa.height);
-        update();
-    }
+    //initgl
     glDisable(GL_DEPTH_TEST);
+    glEnable (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, gwa.width, gwa.height, 0, 0, 1);
+    glOrtho(0, width, height, 0, 0, 1);
     glMatrixMode(GL_MODELVIEW);
     
     //init glut
@@ -69,13 +43,17 @@ bool Gewy::init(int argc, char* argv[]) {
     bb = 0.0;
     ba = 1.0;
     
+    //set the window to be open
+    open = true;
+    
     return true;
 }
 
+/*swap the buffers*/
 void Gewy::update() {
-    //swap buffers
-    glXSwapBuffers(display, win);
-    //clear the screen
+    SDL_Event event; //creates a new event
+    while (SDL_PollEvent(&event)) onEvent(&event); //polls the events
+    SDL_GL_SwapBuffers();
     glClearColor(br, bg, bb, ba);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
@@ -128,7 +106,7 @@ void Gewy::drawFilledOval(int x, int y, int w, int h, double r, double g, double
     glEnd();
 }
 
-    /*Draw text
+/*Draw text
 takes the text to draw, x and y position, font, and colour.
 Fonts can be found at: http://www.docjar.org/docs/api/gl4java/utils/glut/GLUTEnum.html*/
 void Gewy::drawText(string text, int x, int y, void* fnt, double r, double g, double b, double a) {
@@ -157,4 +135,14 @@ void Gewy::setBackground(double r, double g, double b, double a) {
     bg = g;
     bb = b;
     ba = a;
+}
+
+/*Handles Events*/
+void Gewy::onEvent(SDL_Event* event) {
+    switch(event->type) {
+        case SDL_QUIT: { //exit the game
+            open = false;
+            break;
+        }
+    }
 }
